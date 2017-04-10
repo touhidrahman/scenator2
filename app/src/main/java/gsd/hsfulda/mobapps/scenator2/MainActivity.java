@@ -3,7 +3,6 @@ package gsd.hsfulda.mobapps.scenator2;
 import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Intent;
-import android.graphics.Camera;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -110,8 +109,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         final Window window = getWindow();
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        if (savedInstanceState != null)
-        {
+        if (savedInstanceState != null) {
             mCameraIndex = savedInstanceState.getInt(STATE_CAMERA_INDEX, 0);
             mImageSizeIndex = savedInstanceState.getInt(STATE_IMAGE_SIZE_INDEX, 0);
         } else {
@@ -146,7 +144,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         setContentView(mCameraView);
     }
 
-    public void onSaveInstanceState(Bundle savedInstanceState){
+    public void onSaveInstanceState(Bundle savedInstanceState) {
         // save current camera index
         savedInstanceState.putInt(STATE_CAMERA_INDEX, mCameraIndex);
 
@@ -158,7 +156,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public void recreate() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
             super.recreate();
         } else {
             finish();
@@ -184,7 +182,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     protected void onDestroy() {
-        if (mCameraView != null){
+        if (mCameraView != null) {
             mCameraView.disableView();
         }
         super.onDestroy();
@@ -193,13 +191,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public boolean onCreateOptionsMenu(final Menu menu) {
         getMenuInflater().inflate(R.menu.acitivity_main, menu);
-        if (numCameras < 2){
+        if (numCameras < 2) {
             menu.removeItem(R.id.menu_next_camera);
         }
         int numSupportedImageSizes = mSupportedImageSizes.size();
-        if (numSupportedImageSizes > 1){
+        if (numSupportedImageSizes > 1) {
             final SubMenu sizeSubMenu = menu.addSubMenu(R.string.menu_image_size);
-            for (int i = 0; i < numSupportedImageSizes; i++){
+            for (int i = 0; i < numSupportedImageSizes; i++) {
                 final android.hardware.Camera.Size size = mSupportedImageSizes.get(i);
                 sizeSubMenu.add(MENU_GROUP_ID_SIZE, i, Menu.NONE, String.format("%dx%d", size.width, size.height));
             }
@@ -209,22 +207,20 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public boolean onOptionsItemSelected(final MenuItem item) {
-        if (mIsMenuLocked){
+        if (mIsMenuLocked) {
             return true;
         }
-        if (item.getGroupId() == MENU_GROUP_ID_SIZE)
-        {
+        if (item.getGroupId() == MENU_GROUP_ID_SIZE) {
             mImageSizeIndex = item.getItemId();
             recreate();
             return true;
         }
-        switch (item.getItemId()){
+        switch (item.getItemId()) {
             case R.id.menu_next_camera:
                 mIsMenuLocked = true;
                 // if another camera index, then recreate the activity
                 mCameraIndex++;
-                if(mCameraIndex == numCameras)
-                {
+                if (mCameraIndex == numCameras) {
                     mCameraIndex = 0;
                 }
                 mImageSizeIndex = 0;
@@ -259,22 +255,19 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public Mat onCameraFrame(final CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         final Mat rgba = inputFrame.rgba();
 
-        if(mIsPhotoPending)
-        {
+        if (mIsPhotoPending) {
             mIsPhotoPending = false;
             capturePhoto(rgba);
         }
 
-        if (isCameraFrontFacing)
-        {
+        if (isCameraFrontFacing) {
             Core.flip(rgba, rgba, 1); // flip to same variable
         }
 
         return rgba;
     }
 
-    private void capturePhoto(final Mat rgba)
-    {
+    private void capturePhoto(final Mat rgba) {
         final long currTimeMillis = System.currentTimeMillis();
         final String appName = getString(R.string.app_name);
         final String galleryPath = Environment.getExternalStoragePublicDirectory(
@@ -291,8 +284,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         // check album dir exists
         File album = new File(albumPath);
-        if(!album.isDirectory() && !album.mkdirs())
-        {
+        if (!album.isDirectory() && !album.mkdirs()) {
             Log.e(TAG, "Failed to create album dir at " + albumPath);
             onCapturePhotoFailed();
             return;
@@ -300,8 +292,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         // create photo
         Imgproc.cvtColor(rgba, mBgr, Imgproc.COLOR_RGBA2BGR, 3);
-        if (!Imgcodecs.imwrite(photoPath, mBgr))
-        {
+        if (!Imgcodecs.imwrite(photoPath, mBgr)) {
             Log.e(TAG, "Failed to save photo at " + albumPath);
             onCapturePhotoFailed();
         }
@@ -311,14 +302,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         Uri uri = null;
         try {
             uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-        } catch (final Exception e)
-        {
+        } catch (final Exception e) {
             Log.e(TAG, "Failed to insert photo in media store");
             e.printStackTrace();
             // delete photo
             File photo = new File(photoPath);
-            if (!photo.delete())
-            {
+            if (!photo.delete()) {
                 Log.e(TAG, "Failed to delete uninserted photo");
                 onCapturePhotoFailed();
                 return;
@@ -337,7 +326,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
     }
 
-    private void onCapturePhotoFailed(){
+    private void onCapturePhotoFailed() {
         mIsMenuLocked = false;
         final String errMsg = getString(R.string.photo_error_message);
         runOnUiThread(new Runnable() {
