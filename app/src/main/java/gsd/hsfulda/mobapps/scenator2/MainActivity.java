@@ -1,23 +1,34 @@
 package gsd.hsfulda.mobapps.scenator2;
 
+import android.annotation.SuppressLint;
+import android.content.ContentValues;
+import android.content.Intent;
 import android.graphics.Camera;
+import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
+import android.view.SubMenu;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.TextView;
+import android.widget.Toast;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.Core;
 import org.opencv.core.Mat;
-import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 
+import java.io.File;
 import java.util.List;
 
 @SuppressWarnings("deprecation")
@@ -86,6 +97,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         System.loadLibrary("native-lib");
     }
 
+    @SuppressLint("NewApi")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -156,8 +168,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     protected void onPause() {
-        if (mCameraView != null)
-        {
+        if (mCameraView != null) {
             mCameraView.disableView();
         }
         super.onPause();
@@ -179,10 +190,54 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onDestroy();
     }
 
-//    @Override
-//    public boolean onCreateOptionsMenu(final Menu menu) {
-//        getMenuInflater().inflate(R.menu.activity_main, menu);
-//    };
+    @Override
+    public boolean onCreateOptionsMenu(final Menu menu) {
+        getMenuInflater().inflate(R.menu.acitivity_main, menu);
+        if (numCameras < 2){
+            menu.removeItem(R.id.menu_next_camera);
+        }
+        int numSupportedImageSizes = mSupportedImageSizes.size();
+        if (numSupportedImageSizes > 1){
+            final SubMenu sizeSubMenu = menu.addSubMenu(R.string.menu_image_size);
+            for (int i = 0; i < numSupportedImageSizes; i++){
+                final android.hardware.Camera.Size size = mSupportedImageSizes.get(i);
+                sizeSubMenu.add(MENU_GROUP_ID_SIZE, i, Menu.NONE, String.format("%dx%d", size.width, size.height));
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(final MenuItem item) {
+        if (mIsMenuLocked){
+            return true;
+        }
+        if (item.getGroupId() == MENU_GROUP_ID_SIZE)
+        {
+            mImageSizeIndex = item.getItemId();
+            recreate();
+            return true;
+        }
+        switch (item.getItemId()){
+            case R.id.menu_next_camera:
+                mIsMenuLocked = true;
+                // if another camera index, then recreate the activity
+                mCameraIndex++;
+                if(mCameraIndex == numCameras)
+                {
+                    mCameraIndex = 0;
+                }
+                mImageSizeIndex = 0;
+                recreate();
+                return true;
+            case R.id.menu_take_photo:
+                mIsMenuLocked = true;
+                mIsPhotoPending = true;
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
 
     /**
      * A native method that is implemented by the 'native-lib' native library,
@@ -201,7 +256,95 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     @Override
-    public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        return null;
+    public Mat onCameraFrame(final CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
+        final Mat rgba = inputFrame.rgba();
+
+        if(mIsPhotoPending)
+        {
+            mIsPhotoPending = false;
+            capturePhoto(rgba);
+        }
+
+        if (isCameraFrontFacing)
+        {
+            Core.flip(rgba, rgba, 1); // flip to same variable
+        }
+
+        return rgba;
+    }
+
+    private void capturePhoto(final Mat rgba)
+    {
+        final long currTimeMillis = System.currentTimeMillis();
+        final String appName = getString(R.string.app_name);
+        final String galleryPath = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES
+        ).toString();
+        final String albumPath = galleryPath + File.separator + appName;
+        final String photoPath = albumPath + File.separator + currTimeMillis + AfterCaptureActivity.PHOTO_FILE_EXTENSION;
+        final ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.DATA, photoPath);
+        values.put(MediaStore.Images.Media.TITLE, appName);
+        values.put(MediaStore.Images.Media.MIME_TYPE, AfterCaptureActivity.PHOTO_MIME_TYPE);
+        values.put(MediaStore.Images.Media.DESCRIPTION, appName);
+        values.put(MediaStore.Images.Media.DATE_TAKEN, currTimeMillis);
+
+        // check album dir exists
+        File album = new File(albumPath);
+        if(!album.isDirectory() && !album.mkdirs())
+        {
+            Log.e(TAG, "Failed to create album dir at " + albumPath);
+            onCapturePhotoFailed();
+            return;
+        }
+
+        // create photo
+        Imgproc.cvtColor(rgba, mBgr, Imgproc.COLOR_RGBA2BGR, 3);
+        if (!Imgcodecs.imwrite(photoPath, mBgr))
+        {
+            Log.e(TAG, "Failed to save photo at " + albumPath);
+            onCapturePhotoFailed();
+        }
+        Log.d(TAG, "Photo saved to " + albumPath);
+
+        // insert photo on media store
+        Uri uri = null;
+        try {
+            uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+        } catch (final Exception e)
+        {
+            Log.e(TAG, "Failed to insert photo in media store");
+            e.printStackTrace();
+            // delete photo
+            File photo = new File(photoPath);
+            if (!photo.delete())
+            {
+                Log.e(TAG, "Failed to delete uninserted photo");
+                onCapturePhotoFailed();
+                return;
+            }
+
+            // open the photo in AfterCaptureActivity
+            final Intent intent = new Intent(this, AfterCaptureActivity.class);
+            intent.putExtra(AfterCaptureActivity.EXTRA_PHOTO_URI, uri);
+            intent.putExtra(AfterCaptureActivity.EXTRA_PHOTO_DATA_PATH, photoPath);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    startActivity(intent);
+                }
+            });
+        }
+    }
+
+    private void onCapturePhotoFailed(){
+        mIsMenuLocked = false;
+        final String errMsg = getString(R.string.photo_error_message);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, errMsg, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

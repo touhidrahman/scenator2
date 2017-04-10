@@ -9,6 +9,13 @@ import android.view.View;
 
 public class AfterCaptureActivity extends AppCompatActivity {
 
+    public static final String PHOTO_FILE_EXTENSION = ".png";
+    public static final String PHOTO_MIME_TYPE = "image/png";
+    public static final String EXTRA_PHOTO_URI =
+            "cgsd.hsfulda.mobapps.scenator2.AfterCaptureActivity.extra.PHOTO_URI";
+    public static final String EXTRA_PHOTO_DATA_PATH =
+            "cgsd.hsfulda.mobapps.scenator2.AfterCaptureActivity.extra.PHOTO_DATA_PATH";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_next_camera"
+        app:showAsAction="ifRoom|withText"
+        android:title="@string/menu_next_camera" />
+    <item
+        android:id="@+id/menu_take_photo"
+        app:showAsAction="ifRoom|withText"
+        android:title="@string/menu_take_photo" />
+</menu>
