@@ -277,8 +277,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         final String photoPath = albumPath + File.separator + currTimeMillis + AfterCaptureActivity.PHOTO_FILE_EXTENSION;
         final ContentValues values = new ContentValues();
         values.put(MediaStore.MediaColumns.DATA, photoPath);
-        values.put(MediaStore.Images.Media.TITLE, appName);
         values.put(MediaStore.Images.Media.MIME_TYPE, AfterCaptureActivity.PHOTO_MIME_TYPE);
+        values.put(MediaStore.Images.Media.TITLE, appName);
         values.put(MediaStore.Images.Media.DESCRIPTION, appName);
         values.put(MediaStore.Images.Media.DATE_TAKEN, currTimeMillis);
 
@@ -293,13 +293,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         // create photo
         Imgproc.cvtColor(rgba, mBgr, Imgproc.COLOR_RGBA2BGR, 3);
         if (!Imgcodecs.imwrite(photoPath, mBgr)) {
-            Log.e(TAG, "Failed to save photo at " + albumPath);
+            Log.e(TAG, "Failed to save photo at " + photoPath);
             onCapturePhotoFailed();
         }
-        Log.d(TAG, "Photo saved to " + albumPath);
+        Log.d(TAG, "Photo saved to " + photoPath);
 
         // insert photo on media store
-        Uri uri = null;
+        Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
         try {
             uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
         } catch (final Exception e) {
@@ -312,18 +312,25 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 onCapturePhotoFailed();
                 return;
             }
-
-            // open the photo in AfterCaptureActivity
-            final Intent intent = new Intent(this, AfterCaptureActivity.class);
-            intent.putExtra(AfterCaptureActivity.EXTRA_PHOTO_URI, uri);
-            intent.putExtra(AfterCaptureActivity.EXTRA_PHOTO_DATA_PATH, photoPath);
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    startActivity(intent);
-                }
-            });
         }
+        // show a toast
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Photo captured", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // open the photo in AfterCaptureActivity
+        final Intent intent = new Intent(this, AfterCaptureActivity.class);
+        intent.putExtra(AfterCaptureActivity.EXTRA_PHOTO_URI, uri);
+        intent.putExtra(AfterCaptureActivity.EXTRA_PHOTO_DATA_PATH, photoPath);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                startActivity(intent);
+            }
+        });
     }
 
     private void onCapturePhotoFailed() {
