@@ -3,11 +3,17 @@ package gsd.hsfulda.mobapps.scenator2.filters;
 import android.content.Context;
 
 import org.opencv.android.Utils;
+import org.opencv.calib3d.Calib3d;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
+import org.opencv.core.DMatch;
+import org.opencv.core.KeyPoint;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.DescriptorMatcher;
@@ -16,6 +22,8 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ImageDetectionFilter implements Filter {
 
@@ -87,7 +95,109 @@ public class ImageDetectionFilter implements Filter {
 
 
     @Override
-    public void apply(Mat src, Mat dst) {
+    public void apply(final Mat src, final Mat dst) {
+        // convert scene to grayscale
+        Imgproc.cvtColor(src, mGraySrc, Imgproc.COLOR_RGBA2GRAY);
+
+        // detect scene features, compute descriptors and match with ref
+        mFD.detect(mGraySrc, mSceneKeyPoints);
+        mDE.compute(mGraySrc, mSceneKeyPoints, mSceneDescriptors);
+        mDM.match(mSceneDescriptors, mRefDescriptors, mMatches);
+
+        // try to find target img's corners in the scene img
+        findSceneCorners();
+
+        // if corners found, draw outline in target img
+        draw(src, dst);
+    }
+
+
+    private void findSceneCorners() {
+        final List<DMatch> matchesList = mMatches.toList();
+        if (matchesList.size() < 4)
+        {
+            // too few matches
+            return;
+        }
+
+        final List<KeyPoint> refKeyPointList = mRefKeyPoints.toList();
+        final List<KeyPoint> sceneKeyPointList = mSceneKeyPoints.toList();
+
+        // calculate max & min dist between keypoints
+        double maxDist = 0.0;
+        double minDist = Double.MAX_VALUE;
+        for (final DMatch match : matchesList)
+        {
+            final double dist = match.distance;
+            if (dist < minDist)
+            {
+                minDist = dist;
+            }
+            if (dist > maxDist)
+            {
+                maxDist = dist;
+            }
+        }
+        double minThreshold = 50.0;
+        double acceptableThreshold = 25.0;
+        if (minDist > minThreshold)
+        {
+            // target is lost, discard previously found corners
+            mSceneCorners.create(0, 0, mSceneCorners.type());
+            return;
+        } else if (minDist > acceptableThreshold)
+        {
+            // target is almost lost, but still keep corners
+            return;
+        }
+
+        // identify good keypoints based on match distance
+        final ArrayList<Point> goodRefPointsList = new ArrayList<Point>();
+        final ArrayList<Point> goodScenePointsList = new ArrayList<Point>();
+        final double maxGoodMatchDist = 1.75 * minDist;
+        for (final DMatch match : matchesList)
+        {
+            if (match.distance < maxGoodMatchDist)
+            {
+                goodRefPointsList.add(refKeyPointList.get(match.trainIdx).pt);
+                goodScenePointsList.add(sceneKeyPointList.get(match.queryIdx).pt);
+            }
+        }
+
+        if (goodRefPointsList.size() < 4 || goodScenePointsList.size() < 4)
+        {
+            // too few good points to find the homography
+            return;
+        }
+
+        // past this line, we have enough good points to find homography
+        // convert the matched points to MatOfPoint2f format, as
+        // required by the Calib3d.findHomography function.
+        final MatOfPoint2f goodRefPoints = new MatOfPoint2f();
+        final MatOfPoint2f goodScenePoints = new MatOfPoint2f();
+        goodRefPoints.fromList(goodRefPointsList);
+        goodScenePoints.fromList(goodScenePointsList);
+
+        // find homography
+        final Mat homography = Calib3d.findHomography(goodRefPoints, goodScenePoints);
+
+        // use the homography to project ref corner coords into scene coords
+        Core.perspectiveTransform(mRefCorners, mCandidateSceneCorners, homography);
+
+        // convert scene corners to int as reqd by Imgproc.isContourConvex func
+        mCandidateSceneCorners.convertTo(mIntSceneCorners, CvType.CV_32S);
+
+        // check the corners form a convex polygon
+        // if not then detection is false
+        if (Imgproc.isContourConvex(mIntSceneCorners))
+        {
+            // valid
+            mCandidateSceneCorners.copyTo(mSceneCorners);
+        }
+    }
+
+
+    private void draw(Mat src, Mat dst) {
 
     }
 }
