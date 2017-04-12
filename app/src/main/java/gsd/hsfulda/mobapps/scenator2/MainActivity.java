@@ -154,6 +154,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onSaveInstanceState(savedInstanceState);
     }
 
+    @SuppressLint("NewApi")
     @Override
     public void recreate() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
@@ -223,7 +224,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 if (mCameraIndex == numCameras) {
                     mCameraIndex = 0;
                 }
-                mImageSizeIndex = 0;
+//                mImageSizeIndex = 0;
                 recreate();
                 return true;
             case R.id.menu_take_photo:
@@ -299,7 +300,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         Log.d(TAG, "Photo saved to " + photoPath);
 
         // insert photo on media store
-        Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+        Uri uri = null;
         try {
             uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
         } catch (final Exception e) {
