@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Scenator2.iml" filepath="$PROJECT_DIR$/Scenator2.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/openCVLibrary320/openCVLibrary320.iml" filepath="$PROJECT_DIR$/openCVLibrary320/openCVLibrary320.iml" />
+      <module fileurl="file:///media/touhid/dev/CODE/Study/MobileApps/Scenator2/Scenator2.iml" filepath="/media/touhid/dev/CODE/Study/MobileApps/Scenator2/Scenator2.iml" />
+      <module fileurl="file:///media/touhid/dev/CODE/Study/MobileApps/Scenator2/app/app.iml" filepath="/media/touhid/dev/CODE/Study/MobileApps/Scenator2/app/app.iml" />
+      <module fileurl="file:///media/touhid/dev/CODE/Study/MobileApps/Scenator2/openCVLibrary320/openCVLibrary320.iml" filepath="/media/touhid/dev/CODE/Study/MobileApps/Scenator2/openCVLibrary320/openCVLibrary320.iml" />
     </modules>
   </component>
 </project>

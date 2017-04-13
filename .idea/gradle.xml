@@ -7,9 +7,9 @@
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
         <option name="modules">
           <set>
-            <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/app" />
-            <option value="$PROJECT_DIR$/openCVLibrary320" />
+            <option value="/media/touhid/dev/CODE/Study/MobileApps/Scenator2" />
+            <option value="/media/touhid/dev/CODE/Study/MobileApps/Scenator2/app" />
+            <option value="/media/touhid/dev/CODE/Study/MobileApps/Scenator2/openCVLibrary320" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />

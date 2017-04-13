@@ -9,4 +9,8 @@
         android:id="@+id/menu_take_photo"
         app:showAsAction="ifRoom|withText"
         android:title="@string/menu_take_photo" />
+    <item
+        android:id="@+id/menu_next_image_detection_filter"
+        app:showAsAction="ifRoom|withText"
+        android:title="@string/menu_next_image_detection_filter" />
 </menu>

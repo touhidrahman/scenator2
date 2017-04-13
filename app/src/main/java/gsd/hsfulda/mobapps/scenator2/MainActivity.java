@@ -28,7 +28,12 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
+
+import gsd.hsfulda.mobapps.scenator2.filters.BlankFilter;
+import gsd.hsfulda.mobapps.scenator2.filters.Filter;
+import gsd.hsfulda.mobapps.scenator2.filters.ImageDetectionFilter;
 
 @SuppressWarnings("deprecation")
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -41,6 +46,16 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     // and key for active image size
     private static final String STATE_IMAGE_SIZE_INDEX = "imageSizeIndex";
+
+    // Keys for storing the indices of the active filters
+    private static final String STATE_IMAGE_DETECTION_FILTER_INDEX =
+            "imageDetectionFilterIndex";
+
+    // filter
+    private Filter[] mImageDetectionFilters;
+
+    // index of active filter
+    private int mImageDetectionFilterIndex;
 
     // id for image size submenu
     private static final int MENU_GROUP_ID_SIZE = 2;
@@ -82,7 +97,37 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     Log.d(TAG, "OpenCV loaded succefully");
                     mCameraView.enableView();
                     mBgr = new Mat();
+
+                    final Filter starryNight;
+                    try {
+                        starryNight = new ImageDetectionFilter(
+                                MainActivity.this, R.drawable.starry_night
+                        );
+                    } catch (IOException e) {
+                        Log.e(TAG, "Failed to load image from drawable: " + "starry_night");
+                        e.printStackTrace();
+                        break;
+                    }
+
+                    final Filter akbarHunting;
+                    try {
+                        akbarHunting = new ImageDetectionFilter(
+                                MainActivity.this, R.drawable.akbar_hunting_with_cheetahs
+                        );
+                    } catch (IOException e) {
+                        Log.e(TAG, "Failed to load image from drawable: " + "akbar_hunting_with_cheetahs");
+                        e.printStackTrace();
+                        break;
+                    }
+
+                    mImageDetectionFilters = new Filter[]{
+                            new BlankFilter(),
+                            starryNight,
+                            akbarHunting
+                    };
+
                     break;
+
                 default:
                     super.onManagerConnected(status);
                     break;
@@ -112,9 +157,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if (savedInstanceState != null) {
             mCameraIndex = savedInstanceState.getInt(STATE_CAMERA_INDEX, 0);
             mImageSizeIndex = savedInstanceState.getInt(STATE_IMAGE_SIZE_INDEX, 0);
+            mImageDetectionFilterIndex = savedInstanceState.getInt(STATE_IMAGE_DETECTION_FILTER_INDEX, 0);
         } else {
             mCameraIndex = 0;
             mImageSizeIndex = 0;
+            mImageDetectionFilterIndex = 0;
         }
 
         final android.hardware.Camera camera;
@@ -150,6 +197,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         // save the current size index
         savedInstanceState.putInt(STATE_IMAGE_SIZE_INDEX, mImageSizeIndex);
+
+        // save current filter index
+        savedInstanceState.putInt(STATE_IMAGE_DETECTION_FILTER_INDEX, mImageDetectionFilterIndex);
 
         super.onSaveInstanceState(savedInstanceState);
     }
@@ -227,10 +277,19 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 //                mImageSizeIndex = 0;
                 recreate();
                 return true;
+
             case R.id.menu_take_photo:
                 mIsMenuLocked = true;
                 mIsPhotoPending = true;
                 return true;
+
+            case R.id.menu_next_image_detection_filter:
+                mImageDetectionFilterIndex++;
+                if(mImageDetectionFilterIndex == mImageDetectionFilters.length)
+                {
+                    mImageDetectionFilterIndex = 0;
+                }
+
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -255,6 +314,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public Mat onCameraFrame(final CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         final Mat rgba = inputFrame.rgba();
+
+        // Apply the active filters.
+        if (mImageDetectionFilters != null) {
+            mImageDetectionFilters[mImageDetectionFilterIndex].apply(
+                    rgba, rgba);
+        }
 
         if (mIsPhotoPending) {
             mIsPhotoPending = false;
@@ -326,12 +391,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         final Intent intent = new Intent(this, AfterCaptureActivity.class);
         intent.putExtra(AfterCaptureActivity.EXTRA_PHOTO_URI, uri);
         intent.putExtra(AfterCaptureActivity.EXTRA_PHOTO_DATA_PATH, photoPath);
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                startActivity(intent);
-            }
-        });
+        startActivity(intent);
     }
 
     private void onCapturePhotoFailed() {
