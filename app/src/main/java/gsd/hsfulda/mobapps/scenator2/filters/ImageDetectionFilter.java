@@ -198,6 +198,38 @@ public class ImageDetectionFilter implements Filter {
 
 
     private void draw(Mat src, Mat dst) {
+        if (dst != src)
+        {
+            src.copyTo(dst);
+        }
 
+        if (mSceneCorners.height() < 4)
+        {
+            // target not found, give user a que
+            int ht = mRefImage.height();
+            int wd = mRefImage.width();
+            final int maxDimen = Math.min(dst.width(), dst.height()) / 2;
+            final double aspectRatio = wd / (double) ht;
+            if (ht > wd) {
+                ht = maxDimen;
+                wd = (int) (ht * aspectRatio);
+            } else {
+                wd = maxDimen;
+                ht = (int) (wd / aspectRatio);
+            }
+
+            // select the region of interest
+            final Mat dstRegion = dst.submat(0, ht, 0, wd);
+
+            // copy a resized ref image into the region
+            Imgproc.resize(mRefImage, dstRegion, dstRegion.size(), 0.0, 0.0, Imgproc.INTER_AREA);
+            return;
+        }
+
+        // outline the box
+        Imgproc.line(dst, new Point(mSceneCorners.get(0, 0)), new Point(mSceneCorners.get(1, 0)), mLineColor, 4);
+        Imgproc.line(dst, new Point(mSceneCorners.get(1, 0)), new Point(mSceneCorners.get(2, 0)), mLineColor, 4);
+        Imgproc.line(dst, new Point(mSceneCorners.get(2, 0)), new Point(mSceneCorners.get(3, 0)), mLineColor, 4);
+        Imgproc.line(dst, new Point(mSceneCorners.get(3, 0)), new Point(mSceneCorners.get(0, 0)), mLineColor, 4);
     }
 }
