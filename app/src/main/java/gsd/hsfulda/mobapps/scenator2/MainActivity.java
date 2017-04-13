@@ -391,7 +391,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         final Intent intent = new Intent(this, AfterCaptureActivity.class);
         intent.putExtra(AfterCaptureActivity.EXTRA_PHOTO_URI, uri);
         intent.putExtra(AfterCaptureActivity.EXTRA_PHOTO_DATA_PATH, photoPath);
-        startActivity(intent);
+        // startActivity(intent);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                startActivity(intent);
+            }
+        });
     }
 
     private void onCapturePhotoFailed() {

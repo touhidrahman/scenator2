@@ -31,8 +31,8 @@
         <activity
             android:name=".AfterCaptureActivity"
             android:label="@string/title_activity_lab"
-            android:screenOrientation="landscape"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
+            android:screenOrientation="landscape">
+        </activity>
     </application>
 
 </manifest>
