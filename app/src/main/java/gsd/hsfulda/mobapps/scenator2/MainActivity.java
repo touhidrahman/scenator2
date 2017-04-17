@@ -158,7 +158,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onSaveInstanceState(savedInstanceState);
     }
 
-    @SuppressLint("NewApi")
     @Override
     public void recreate() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
@@ -182,10 +181,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onResume();
 
         if (OpenCVLoader.initDebug()) {
-            Log.i(TAG, "OpenCV loaded successfully.");
+            Log.i(TAG, "OpenCV loaded successfully from app.");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         } else {
-            Log.i(TAG, "OpenCV not loaded");
+            Log.i(TAG, "OpenCV not loaded from app. Trying to load from OpenCV engine (manager).");
             OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, this, mLoaderCallback);
         }
         mIsMenuLocked = false;
@@ -221,6 +220,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if (mIsMenuLocked) {
             return true;
         }
+        // on selecting a size reload the camera view (recreate)
         if (item.getGroupId() == MENU_GROUP_ID_SIZE) {
             mImageSizeIndex = item.getItemId();
             recreate();
@@ -234,7 +234,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 if (mCameraIndex == numCameras) {
                     mCameraIndex = 0;
                 }
-//                mImageSizeIndex = 0;
                 recreate();
                 return true;
 
@@ -271,6 +270,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         // feature detect
         objDetection(mGray.getNativeObjAddr(), mRgba.getNativeObjAddr());
 
+        // take photo button pressed
         if (mIsPhotoPending) {
             mIsPhotoPending = false;
 
@@ -309,6 +309,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
 
         // create photo
+        mBgr = new Mat();
         Imgproc.cvtColor(mRgba, mBgr, Imgproc.COLOR_RGBA2BGR, 3);
         if (!Imgcodecs.imwrite(photoPath, mBgr)) {
             Log.e(TAG, "Failed to save photo at " + photoPath);
@@ -343,13 +344,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         final Intent intent = new Intent(this, AfterCaptureActivity.class);
         intent.putExtra(AfterCaptureActivity.EXTRA_PHOTO_URI, uri);
         intent.putExtra(AfterCaptureActivity.EXTRA_PHOTO_DATA_PATH, photoPath);
-        // startActivity(intent);
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                startActivity(intent);
-            }
-        });
+         startActivity(intent);
+//        runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                startActivity(intent);
+//            }
+//        });
     }
 
     private void onCapturePhotoFailed() {
