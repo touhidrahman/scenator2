@@ -51,12 +51,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private static final String STATE_IMAGE_DETECTION_FILTER_INDEX =
             "imageDetectionFilterIndex";
 
-    // filter
-    private Filter[] mImageDetectionFilters;
-
-    // index of active filter
-    private int mImageDetectionFilterIndex;
-
     // id for image size submenu
     private static final int MENU_GROUP_ID_SIZE = 2;
 
@@ -98,34 +92,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     mCameraView.enableView();
                     mBgr = new Mat();
 
-                    final Filter starryNight;
-                    try {
-                        starryNight = new ImageDetectionFilter(
-                                MainActivity.this, R.drawable.starry_night
-                        );
-                    } catch (IOException e) {
-                        Log.e(TAG, "Failed to load image from drawable: " + "starry_night");
-                        e.printStackTrace();
-                        break;
-                    }
-
-                    final Filter akbarHunting;
-                    try {
-                        akbarHunting = new ImageDetectionFilter(
-                                MainActivity.this, R.drawable.akbar_hunting_with_cheetahs
-                        );
-                    } catch (IOException e) {
-                        Log.e(TAG, "Failed to load image from drawable: " + "akbar_hunting_with_cheetahs");
-                        e.printStackTrace();
-                        break;
-                    }
-
-                    mImageDetectionFilters = new Filter[]{
-                            new BlankFilter(),
-                            starryNight,
-                            akbarHunting
-                    };
-
                     break;
 
                 default:
@@ -145,11 +111,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//        setContentView(R.layout.activity_main);
-//
-//        // Example of a call to a native method
-//        TextView tv = (TextView) findViewById(R.id.sample_text);
-//        tv.setText(stringFromJNI());
 
         final Window window = getWindow();
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -157,11 +118,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if (savedInstanceState != null) {
             mCameraIndex = savedInstanceState.getInt(STATE_CAMERA_INDEX, 0);
             mImageSizeIndex = savedInstanceState.getInt(STATE_IMAGE_SIZE_INDEX, 0);
-            mImageDetectionFilterIndex = savedInstanceState.getInt(STATE_IMAGE_DETECTION_FILTER_INDEX, 0);
         } else {
             mCameraIndex = 0;
             mImageSizeIndex = 0;
-            mImageDetectionFilterIndex = 0;
         }
 
         final android.hardware.Camera camera;
@@ -197,9 +156,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         // save the current size index
         savedInstanceState.putInt(STATE_IMAGE_SIZE_INDEX, mImageSizeIndex);
-
-        // save current filter index
-        savedInstanceState.putInt(STATE_IMAGE_DETECTION_FILTER_INDEX, mImageDetectionFilterIndex);
 
         super.onSaveInstanceState(savedInstanceState);
     }
@@ -283,23 +239,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 mIsPhotoPending = true;
                 return true;
 
-            case R.id.menu_next_image_detection_filter:
-                mImageDetectionFilterIndex++;
-                if(mImageDetectionFilterIndex == mImageDetectionFilters.length)
-                {
-                    mImageDetectionFilterIndex = 0;
-                }
-
             default:
                 return super.onOptionsItemSelected(item);
         }
     }
-
-    /**
-     * A native method that is implemented by the 'native-lib' native library,
-     * which is packaged with this application.
-     */
-    public native String stringFromJNI();
 
     @Override
     public void onCameraViewStarted(int width, int height) {
@@ -314,12 +257,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public Mat onCameraFrame(final CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         final Mat rgba = inputFrame.rgba();
-
-        // Apply the active filters.
-        if (mImageDetectionFilters != null) {
-            mImageDetectionFilters[mImageDetectionFilterIndex].apply(
-                    rgba, rgba);
-        }
 
         if (mIsPhotoPending) {
             mIsPhotoPending = false;

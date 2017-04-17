@@ -12,8 +12,13 @@ android {
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
-                cppFlags ""
+                arguments "-DANDROID_ARM_NEON=TRUE", "-DANDROID_TOOLCHAIN=clang", "-DCMAKE_BUILD_TYPE=Release"
+                //'-DANDROID_STL=gnustl_static'
+                cppFlags "-std=c++11", "-frtti", "-fexceptions"
             }
+        }
+        ndk {
+            abiFilters 'armeabi-v7a'
         }
     }
     buildTypes {
