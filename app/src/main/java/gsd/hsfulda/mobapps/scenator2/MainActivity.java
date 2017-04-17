@@ -23,6 +23,7 @@ import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -46,10 +47,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     // and key for active image size
     private static final String STATE_IMAGE_SIZE_INDEX = "imageSizeIndex";
-
-    // Keys for storing the indices of the active filters
-    private static final String STATE_IMAGE_DETECTION_FILTER_INDEX =
-            "imageDetectionFilterIndex";
 
     // id for image size submenu
     private static final int MENU_GROUP_ID_SIZE = 2;
@@ -77,6 +74,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     // A matrix that is used when saving photos.
     private Mat mBgr;
+    Mat mRgba;
+    Mat mGray;
 
     // Whether an asynchronous menu action is in progress.
     // If so, menu interaction should be disabled.
@@ -90,8 +89,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 case LoaderCallbackInterface.SUCCESS:
                     Log.d(TAG, "OpenCV loaded succefully");
                     mCameraView.enableView();
-                    mBgr = new Mat();
-
                     break;
 
                 default:
@@ -104,10 +101,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     // Used to load the 'native-lib' library on application startup.
     static {
+        System.loadLibrary("opencv_java3");
+        System.loadLibrary("opencv_java");
         System.loadLibrary("native-lib");
     }
 
-    @SuppressLint("NewApi")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -173,26 +171,32 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     protected void onPause() {
+        super.onPause();
         if (mCameraView != null) {
             mCameraView.disableView();
         }
-        super.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        //TODO: in case of probs, check here with the version num
-        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
+
+        if (OpenCVLoader.initDebug()) {
+            Log.i(TAG, "OpenCV loaded successfully.");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        } else {
+            Log.i(TAG, "OpenCV not loaded");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, this, mLoaderCallback);
+        }
         mIsMenuLocked = false;
     }
 
     @Override
     protected void onDestroy() {
+        super.onDestroy();
         if (mCameraView != null) {
             mCameraView.disableView();
         }
-        super.onDestroy();
     }
 
     @Override
@@ -246,31 +250,42 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public void onCameraViewStarted(int width, int height) {
+        // for RGBA pic
+        mRgba = new Mat(height, width, CvType.CV_8UC4);
 
+        // for Grayscale pic
+        mGray = new Mat(height, width, CvType.CV_8UC1);
     }
 
     @Override
     public void onCameraViewStopped() {
-
+        mRgba.release();
+        mGray.release();
     }
 
     @Override
     public Mat onCameraFrame(final CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        final Mat rgba = inputFrame.rgba();
+        mRgba = inputFrame.rgba();
+        mGray = inputFrame.gray();
+
+        // feature detect
+        objDetection(mGray.getNativeObjAddr(), mRgba.getNativeObjAddr());
 
         if (mIsPhotoPending) {
             mIsPhotoPending = false;
-            capturePhoto(rgba);
+
+            capturePhoto(mRgba);
         }
 
         if (isCameraFrontFacing) {
-            Core.flip(rgba, rgba, 1); // flip to same variable
+            Core.flip(mRgba, mRgba, 1); // flip to same variable
         }
 
-        return rgba;
+        return mRgba;
     }
 
-    private void capturePhoto(final Mat rgba) {
+    private void capturePhoto(Mat mRgba) {
+        // save photo
         final long currTimeMillis = System.currentTimeMillis();
         final String appName = getString(R.string.app_name);
         final String galleryPath = Environment.getExternalStoragePublicDirectory(
@@ -294,7 +309,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
 
         // create photo
-        Imgproc.cvtColor(rgba, mBgr, Imgproc.COLOR_RGBA2BGR, 3);
+        Imgproc.cvtColor(mRgba, mBgr, Imgproc.COLOR_RGBA2BGR, 3);
         if (!Imgcodecs.imwrite(photoPath, mBgr)) {
             Log.e(TAG, "Failed to save photo at " + photoPath);
             onCapturePhotoFailed();
@@ -347,4 +362,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
         });
     }
+
+    // native functions used with opencv
+    public native static void objDetection(long addrGray, long addrRgba);
 }

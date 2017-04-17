@@ -9,7 +9,7 @@ extern "C" {
 
 
 void
-Java_msgsd_mobapps_scenator5_MainActivity_objDetection(JNIEnv *env, jclass type, jlong addrGray,
+Java_gsd_hsfulda_mobapps_scenator2_MainActivity_objDetection(JNIEnv *env, jclass type, jlong addrGray,
                                                        jlong addrRgba) {
     Mat &mGr = *(Mat *) addrGray;
     Mat &mRgb = *(Mat *) addrRgba;
